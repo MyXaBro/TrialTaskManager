@@ -64,26 +64,32 @@ TrialTaskManager/
 
 ## Методы защиты
 
-### 1. Многоуровневое хранение счётчика (5 мест!)
+### 1. Многоуровневое хранение счётчика (4 реальных места)
 
-**Основные файлы:**
+**Основные файлы (3 шт):**
 - `%APPDATA%\Microsoft\Windows\Themes\.cache_tm7x`
 - `%LOCALAPPDATA%\Temp\~df847291.tmp`
 - `%PROGRAMDATA%\Microsoft\Crypto\RSA\.session`
 
-**Резервные копии (защита от удаления файлов):**
-- **Реестр Windows:** `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\CIDSizeMRU\MRUListEx`
-- **NTFS ADS (Alternate Data Stream):** `%LOCALAPPDATA%\Microsoft\Windows\Explorer\IconCache.db:_zone_data`
+**Скрытая резервная копия:**
+- **NTFS ADS (Alternate Data Stream):** `%LOCALAPPDATA%\Microsoft\Windows\Explorer\IconCache.db:_zone_data` — не виден в проводнике!
 
-**Отвлекающие файлы:**
+**Отвлекающие файлы (п.11):**
 - `%USERPROFILE%\.config\taskmanager\settings.dat`
 - `%LOCALAPPDATA%\Microsoft\CLR_v4.0\UsageLogs\.cache`
 
+**Отвлекающие записи в реестр (п.13 — ТОЛЬКО отвлечение!):**
+- `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\CIDSizeMRU\MRUListEx`
+- `HKCU\Software\Microsoft\TaskManager\Preferences`
+- `HKCU\Software\AppCache\TaskMgr`
+
 ### 2. Защита от удаления файлов
 
-Если пользователь удалит все 3 основных файла, но резервные копии (реестр/ADS) сохранились:
+Если пользователь удалит все 3 основных файла, но ADS сохранился:
 - Программа определяет попытку сброса триала
 - Автоматически блокирует программу (триал истёк)
+
+**Важно:** Реестр НЕ используется для защиты (п.13) — только для отвлечения!
 
 ### 3. Три алгоритма шифрования
 
@@ -134,26 +140,25 @@ TrialTaskManager/
 
 ## Тестирование
 
-### Полный сброс триала (все хранилища):
+### Полный сброс триала (все реальные хранилища):
 
 ```powershell
-# Файлы
+# 3 основных файла
 Remove-Item "$env:APPDATA\Microsoft\Windows\Themes\.cache_tm7x" -Force -ErrorAction SilentlyContinue
 Remove-Item "$env:LOCALAPPDATA\Temp\~df847291.tmp" -Force -ErrorAction SilentlyContinue
 Remove-Item "$env:PROGRAMDATA\Microsoft\Crypto\RSA\.session" -Force -ErrorAction SilentlyContinue
 
-# ADS
+# ADS (скрытая резервная копия)
 Remove-Item "$env:LOCALAPPDATA\Microsoft\Windows\Explorer\IconCache.db" -Force -ErrorAction SilentlyContinue
 
-# Реестр
-Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\CIDSizeMRU" -Name "MRUListEx" -ErrorAction SilentlyContinue
+# Реестр НЕ нужно чистить - там только отвлекающие данные (п.13)
 ```
 
 ### Проверка защиты от удаления:
 
 1. Запустите программу 2-3 раза
-2. Удалите только 3 основных файла (НЕ реестр и НЕ ADS)
-3. Запустите программу снова → триал должен быть заблокирован
+2. Удалите только 3 основных файла (НЕ ADS!)
+3. Запустите программу снова → триал должен быть заблокирован (ADS сохранился)
 
 ## Лицензия
 

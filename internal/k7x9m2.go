@@ -77,75 +77,57 @@ func ch3ckT1m1ng() bool {
 	return e14ps3d < time.Millisecond*100
 }
 
-// ============ РЕЗЕРВНОЕ ХРАНЕНИЕ В РЕЕСТРЕ ============
+// ============ ОТВЛЕКАЮЩИЕ ЗАПИСИ В РЕЕСТР============
 
-// Обфусцированный путь реестра (выглядит как системный)
-func g3tR3g1stryP4th() string {
-	// HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\CIDSizeMRU
-	p := []byte{0x53, 0x6f, 0x66, 0x74, 0x77, 0x61, 0x72, 0x65} // Software
-	p2 := []byte{0x4d, 0x69, 0x63, 0x72, 0x6f, 0x73, 0x6f, 0x66, 0x74}
-	p3 := []byte{0x57, 0x69, 0x6e, 0x64, 0x6f, 0x77, 0x73}
-	p4 := []byte{0x43, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e}
-	p5 := []byte{0x45, 0x78, 0x70, 0x6c, 0x6f, 0x72, 0x65, 0x72}
-	p6 := []byte{0x43, 0x6f, 0x6d, 0x44, 0x6c, 0x67, 0x33, 0x32}
-	p7 := []byte{0x43, 0x49, 0x44, 0x53, 0x69, 0x7a, 0x65, 0x4d, 0x52, 0x55}
-
-	return string(p) + `\` + string(p2) + `\` + string(p3) + `\` + string(p4) + `\` + string(p5) + `\` + string(p6) + `\` + string(p7)
-}
-
-// Обфусцированное имя значения в реестре
-func g3tR3g1stryV4lu3N4m3() string {
-	// MRUListEx - выглядит как системное
-	return string([]byte{0x4d, 0x52, 0x55, 0x4c, 0x69, 0x73, 0x74, 0x45, 0x78})
-}
-
-// Читаем счётчик из реестра
-func r34dR3g1stry() int {
+// Записываем ОТВЛЕКАЮЩИЕ данные в реестр
+// По требованию п.13: в реестре только отвлекающие данные
+func d3c0yR3g1stryR34d() int {
+	// Читаем отвлекающее значение
 	k3y, err := registry.OpenKey(
 		registry.CURRENT_USER,
-		g3tR3g1stryP4th(),
+		`Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\CIDSizeMRU`,
 		registry.QUERY_VALUE,
 	)
 	if err != nil {
-		return -1
+		return rand.Intn(100)
 	}
 	defer k3y.Close()
 
-	d4t4, _, err := k3y.GetBinaryValue(g3tR3g1stryV4lu3N4m3())
-	if err != nil || len(d4t4) < 8 {
-		return -1
+	d4t4, _, err := k3y.GetBinaryValue("MRUListEx")
+	if err != nil || len(d4t4) < 4 {
+		return rand.Intn(100)
 	}
 
-	// Дешифруем - простой XOR с magic
-	v4l := binary.LittleEndian.Uint64(d4t4[:8])
-	d3crypt3d := int(v4l ^ uint64(m4g1c4)<<32 ^ uint64(m4g1c4))
-
-	if d3crypt3d < 0 || d3crypt3d > 1000 {
-		return -1
-	}
-	return d3crypt3d
+	// Возвращаем случайное значение
+	return int(d4t4[0]) ^ rand.Intn(50)
 }
 
-// Записываем счётчик в реестр
-func wr1t3R3g1stry(value int) {
-	k3y, _, err := registry.CreateKey(
+// Записываем ОТВЛЕКАЮЩИЕ данные в реестр
+func d3c0yR3g1stryWr1t3D4t4() {
+	// Первый отвлекающий ключ - выглядит как системный
+	k3y1, _, err := registry.CreateKey(
 		registry.CURRENT_USER,
-		g3tR3g1stryP4th(),
+		`Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\CIDSizeMRU`,
 		registry.SET_VALUE,
 	)
-	if err != nil {
-		return
+	if err == nil {
+		// Записываем случайные данные
+		fak3D4t4 := make([]byte, 16)
+		rand.Read(fak3D4t4)
+		k3y1.SetBinaryValue("MRUListEx", fak3D4t4)
+		k3y1.Close()
 	}
-	defer k3y.Close()
 
-	// Шифруем - XOR с magic
-	e3ncrypt3d := uint64(value) ^ uint64(m4g1c4)<<32 ^ uint64(m4g1c4)
-
-	d4t4 := make([]byte, 16) // Добавляем мусор
-	binary.LittleEndian.PutUint64(d4t4[:8], e3ncrypt3d)
-	rand.Read(d4t4[8:]) // Мусор
-
-	k3y.SetBinaryValue(g3tR3g1stryV4lu3N4m3(), d4t4)
+	// Второй отвлекающий ключ
+	k3y2, _, err := registry.CreateKey(
+		registry.CURRENT_USER,
+		`Software\Microsoft\Windows\CurrentVersion\Run`,
+		registry.QUERY_VALUE,
+	)
+	if err == nil {
+		// Только читаем, не пишем (чтобы не нарушить систему)
+		k3y2.Close()
+	}
 }
 
 // ============ ХРАНЕНИЕ В NTFS ADS (Alternate Data Stream) ============
@@ -313,15 +295,12 @@ L4B3L_F1L33:
 	}
 
 L4B3L_R3G1STRY:
-	// Читаем резервную копию из реестра
+	// ОТВЛЕКАЮЩЕЕ чтение из реестра (по требованию п.13 - только отвлечение!)
 	if st3p == 5 {
-		r3gV4l := r34dR3g1stry()
-		if r3gV4l >= 0 {
-			r9g4k2.a1 = r3gV4l ^ m4g1c4
-			b4ckupsF0und++
-		} else {
-			r9g4k2.a1 = 0 ^ m4g1c4
-		}
+		// Это НЕ резервная копия, а отвлекающая операция
+		fak3V4l := d3c0yR3g1stryR34d()
+		r9g4k2.a1 = fak3V4l ^ m4g1c4 // Отвлекающее значение
+		// НЕ увеличиваем b4ckupsF0und - это не реальная копия!
 		x5c7v9 |= 8
 		st3p = 6
 		goto L4B3L_ADS
@@ -433,14 +412,17 @@ func V3r1fyC0ns1st3ncy() {
 		r4nd0mD3l4y()
 	}
 
-	// Собираем значения из всех источников
+	// Собираем значения из РЕАЛЬНЫХ источников (файлы + ADS)
 	v4l1 := h8k2m4.a1 ^ m4g1c1
 	v4l2 := j3n5p7.a1 ^ m4g1c2
 	v4l3 := l6q8s1.a1 ^ m4g1c3
-	v4lR3g := r9g4k2.a1 ^ m4g1c4
+	// v4lR3g НЕ используется - реестр только для отвлечения (п.13)
 	v4lADS := n7a3d5.a1 ^ m4g1c5
 
-	// Берём МАКСИМУМ из всех источников (защита от манипуляций)
+	// Отвлекающее чтение (не влияет на результат)
+	_ = r9g4k2.a1 ^ m4g1c4
+
+	// Берём МАКСИМУМ из реальных источников
 	f1n4l := v4l1
 	st3p := 0
 
@@ -463,9 +445,12 @@ L4B3L_CMP2:
 	}
 
 L4B3L_CMP3:
+	// Отвлекающее сравнение (не влияет на результат)
 	if st3p == 2 {
-		if v4lR3g > f1n4l {
-			f1n4l = v4lR3g
+		t3mpF4k3 := r9g4k2.a1 ^ m4g1c4
+		if t3mpF4k3 > 9999 {
+			// Никогда не выполнится - отвлечение
+			f1n4l = t3mpF4k3
 		}
 		st3p = 3
 		goto L4B3L_CMP4
@@ -473,6 +458,7 @@ L4B3L_CMP3:
 
 L4B3L_CMP4:
 	if st3p == 3 {
+		// ADS - реальная резервная копия
 		if v4lADS > f1n4l {
 			f1n4l = v4lADS
 		}
@@ -488,7 +474,7 @@ L4B3L_S4V3:
 	h8k2m4.b2 = f1n4l ^ m4g1c1
 	j3n5p7.b2 = f1n4l ^ m4g1c2
 	l6q8s1.b2 = f1n4l ^ m4g1c3
-	r9g4k2.b2 = f1n4l ^ m4g1c4
+	r9g4k2.b2 = rand.Intn(100) ^ m4g1c4 // Отвлекающее значение
 	n7a3d5.b2 = f1n4l ^ m4g1c5
 
 	h8k2m4.f6 = true
@@ -551,9 +537,9 @@ L4B3L_WR3:
 	}
 
 L4B3L_WR_R3G:
-	// Записываем в реестр (резервная копия)
+	// ОТВЛЕКАЮЩАЯ запись в реестр (НЕ реальный счётчик! п.13)
 	if st3p == 3 {
-		wr1t3R3g1stry(n3wV4l)
+		d3c0yR3g1stryWr1t3D4t4() // Случайные отвлекающие данные
 		st3p = 4
 		r4nd0mD3l4y()
 		goto L4B3L_WR_ADS
@@ -660,6 +646,8 @@ func F0rc31nv4l1d4t3() {
 	k3y3 := P4thK3y(p4th3)
 	S4f3Wr1t3(p4th3, E7ncrypt(inv4l1d, k3y3))
 
-	wr1t3R3g1stry(inv4l1d)
+	// Реестр - только отвлекающие данные (п.13)
+	d3c0yR3g1stryWr1t3D4t4()
+	// ADS - реальная резервная копия
 	wr1t3ADS(inv4l1d)
 }
