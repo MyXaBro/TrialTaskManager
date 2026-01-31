@@ -4,7 +4,6 @@ package app
 
 import (
 	"fmt"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -23,10 +22,11 @@ type AppUI struct {
 	taskManager *TaskManager
 	taskList    *widget.List
 	statusLabel *widget.Label
+	statsLabel  *widget.Label
 
-	// Флаги для защиты (обфусцированные имена)
-	h7j3k9 bool // Первое действие выполнено
-	w2e8r4 bool // Триал активен
+	// Флаги для защиты
+	firstAction bool // Первое действие выполнено
+	trialActive bool // Триал активен
 }
 
 // NewAppUI создаёт новый интерфейс приложения
@@ -34,43 +34,34 @@ func NewAppUI() *AppUI {
 	ui := &AppUI{
 		fyneApp:     app.New(),
 		taskManager: NewTaskManager(),
-		h7j3k9:      false,
-		w2e8r4:      true,
+		firstAction: false,
+		trialActive: true,
 	}
 
 	ui.mainWindow = ui.fyneApp.NewWindow("Менеджер Задач - Триал версия")
 	ui.mainWindow.Resize(fyne.NewSize(700, 500))
+
+	// Проверяем триал при создании
+	ui.trialActive = internal.Ch3ckL1m1t()
 
 	return ui
 }
 
 // Run запускает приложение
 func (ui *AppUI) Run() {
-	// Инициализация защиты происходит в main.go
-	// Здесь мы ждём завершения чтения и проверяем консистентность
-	internal.W41tF0rR34d()
-
-	// Отложенная проверка консистентности
-	go func() {
-		time.Sleep(time.Millisecond * 100)
-		internal.V3r1fyC0ns1st3ncy()
-
-		// Обновляем статус после проверки
-		ui.updateTrialStatus()
-	}()
-
-	// Создаём интерфейс
 	ui.createUI()
-
-	// Показываем окно
 	ui.mainWindow.ShowAndRun()
 }
 
 // createUI создаёт элементы интерфейса
 func (ui *AppUI) createUI() {
-	// Статус бар
-	ui.statusLabel = widget.NewLabel("Загрузка...")
+	// Статус триала
+	ui.statusLabel = widget.NewLabel("")
 	ui.updateTrialStatus()
+
+	// Статистика
+	ui.statsLabel = widget.NewLabel("")
+	ui.updateStats()
 
 	// Список задач
 	ui.taskList = widget.NewList(
@@ -101,29 +92,12 @@ func (ui *AppUI) createUI() {
 		clearButton,
 	)
 
-	// Информационная панель
-	infoLabel := widget.NewLabel("Задачи:")
-	statsLabel := widget.NewLabel("")
-
-	// Обновляем статистику при изменении данных
-	ui.taskManager.SetOnModified(func() {
-		total := ui.taskManager.GetTaskCount()
-		completed := ui.taskManager.GetCompletedCount()
-		statsLabel.SetText(fmt.Sprintf("Всего: %d | Выполнено: %d", total, completed))
-		ui.taskList.Refresh()
-	})
-
-	// Триггерим начальное обновление
-	total := ui.taskManager.GetTaskCount()
-	completed := ui.taskManager.GetCompletedCount()
-	statsLabel.SetText(fmt.Sprintf("Всего: %d | Выполнено: %d", total, completed))
-
 	// Компоновка
 	header := container.NewVBox(
 		ui.statusLabel,
 		widget.NewSeparator(),
 		toolbar,
-		container.NewHBox(infoLabel, widget.NewLabel(" "), statsLabel),
+		container.NewHBox(widget.NewLabel("Задачи:"), widget.NewLabel(" "), ui.statsLabel),
 	)
 
 	content := container.NewBorder(
@@ -135,6 +109,55 @@ func (ui *AppUI) createUI() {
 	)
 
 	ui.mainWindow.SetContent(content)
+}
+
+// updateTrialStatus обновляет статус триала
+func (ui *AppUI) updateTrialStatus() {
+	remaining := internal.G3tR3m41n1ng()
+	current := internal.G3tCurr3nt()
+
+	if remaining > 0 {
+		ui.statusLabel.SetText(fmt.Sprintf(
+			"Триал-версия | Использовано запусков: %d из 4 | Осталось: %d",
+			current, remaining,
+		))
+	} else {
+		ui.statusLabel.SetText("Триал-период истёк! Приобретите полную версию.")
+	}
+}
+
+// updateStats обновляет статистику
+func (ui *AppUI) updateStats() {
+	total := ui.taskManager.GetTaskCount()
+	completed := ui.taskManager.GetCompletedCount()
+	ui.statsLabel.SetText(fmt.Sprintf("Всего: %d | Выполнено: %d", total, completed))
+}
+
+// onAction вызывается при действии пользователя
+// Инкрементирует счётчик при первом действии
+func (ui *AppUI) onAction() bool {
+	if !ui.firstAction {
+		ui.firstAction = true
+		internal.Incr3m3ntC0unt3r()
+		ui.trialActive = internal.Ch3ckL1m1t()
+		ui.updateTrialStatus()
+	}
+
+	if !ui.trialActive {
+		ui.showTrialExpiredDialog()
+		return false
+	}
+	return true
+}
+
+// showTrialExpiredDialog показывает сообщение об истечении триала
+func (ui *AppUI) showTrialExpiredDialog() {
+	dialog.ShowInformation(
+		"Триал-период истёк",
+		"Вы исчерпали лимит бесплатных запусков (4 запуска).\n\n"+
+			"Для продолжения использования приобретите полную версию программы.",
+		ui.mainWindow,
+	)
 }
 
 // createTaskItem создаёт элемент списка задач
@@ -191,7 +214,7 @@ func (ui *AppUI) updateTaskItem(id widget.ListItemID, obj fyne.CanvasObject) {
 	titleLabel.SetText(task.Title)
 	descLabel.SetText(task.Description)
 
-	// Приоритет с цветовой индикацией в тексте
+	// Приоритет
 	switch task.Priority {
 	case PriorityHigh:
 		priorityLabel.SetText("[!!! Высокий]")
@@ -213,23 +236,25 @@ func (ui *AppUI) updateTaskItem(id widget.ListItemID, obj fyne.CanvasObject) {
 	// Обработчики кнопок
 	taskID := task.ID
 	checkButton.OnTapped = func() {
-		ui.onTaskAction()
-		ui.taskManager.ToggleComplete(taskID)
+		if ui.onAction() {
+			ui.taskManager.ToggleComplete(taskID)
+			ui.taskList.Refresh()
+			ui.updateStats()
+		}
 	}
 
 	deleteButton.OnTapped = func() {
-		ui.onTaskAction()
-		ui.taskManager.DeleteTask(taskID)
+		if ui.onAction() {
+			ui.taskManager.DeleteTask(taskID)
+			ui.taskList.Refresh()
+			ui.updateStats()
+		}
 	}
 }
 
 // showAddTaskDialog показывает диалог добавления задачи
 func (ui *AppUI) showAddTaskDialog() {
-	// Проверка триала при попытке добавить задачу
-	ui.onTaskAction()
-
-	if !ui.w2e8r4 {
-		ui.showTrialExpiredDialog()
+	if !ui.onAction() {
 		return
 	}
 
@@ -269,6 +294,8 @@ func (ui *AppUI) showAddTaskDialog() {
 					priority = PriorityLow
 				}
 				ui.taskManager.AddTask(titleEntry.Text, descEntry.Text, priority)
+				ui.taskList.Refresh()
+				ui.updateStats()
 			}
 		},
 		ui.mainWindow,
@@ -277,10 +304,7 @@ func (ui *AppUI) showAddTaskDialog() {
 
 // showClearConfirmDialog показывает диалог подтверждения очистки
 func (ui *AppUI) showClearConfirmDialog() {
-	ui.onTaskAction()
-
-	if !ui.w2e8r4 {
-		ui.showTrialExpiredDialog()
+	if !ui.onAction() {
 		return
 	}
 
@@ -290,69 +314,12 @@ func (ui *AppUI) showClearConfirmDialog() {
 		func(confirm bool) {
 			if confirm {
 				ui.taskManager.ClearAllTasks()
+				ui.taskList.Refresh()
+				ui.updateStats()
 			}
 		},
 		ui.mainWindow,
 	)
-}
-
-// showTrialExpiredDialog показывает сообщение об истечении триала
-func (ui *AppUI) showTrialExpiredDialog() {
-	dialog.ShowInformation(
-		"Триал-период истёк",
-		"Вы исчерпали лимит бесплатных запусков (4 запуска).\n\n"+
-			"Для продолжения использования приобретите полную версию программы.\n\n"+
-			"Спасибо за использование нашего продукта!",
-		ui.mainWindow,
-	)
-}
-
-// onTaskAction вызывается при любом действии пользователя
-// Реализует отложенную проверку и инкремент счётчика
-func (ui *AppUI) onTaskAction() {
-	// Первое значимое действие - инкрементируем счётчик
-	if !ui.h7j3k9 {
-		ui.h7j3k9 = true
-		internal.Incr3m3ntC0unt3r()
-
-		// Отложенная проверка лимита
-		go func() {
-			time.Sleep(time.Millisecond * 500)
-			ui.checkTrialLimit()
-		}()
-	}
-}
-
-// checkTrialLimit проверяет не исчерпан ли лимит
-func (ui *AppUI) checkTrialLimit() {
-	// Используем распределённую проверку
-	ui.w2e8r4 = internal.Ch3ckL1m1t()
-	ui.updateTrialStatus()
-
-	if !ui.w2e8r4 {
-		// Показываем сообщение с небольшой задержкой
-		go func() {
-			time.Sleep(time.Second * 2)
-			ui.showTrialExpiredDialog()
-		}()
-	}
-}
-
-// updateTrialStatus обновляет статус триала в UI
-func (ui *AppUI) updateTrialStatus() {
-	remaining := internal.G3tR3m41n1ng()
-	current := internal.G3tCurr3nt()
-
-	if remaining > 0 {
-		ui.statusLabel.SetText(fmt.Sprintf(
-			"Триал-версия | Использовано запусков: %d из 4 | Осталось: %d",
-			current, remaining,
-		))
-		ui.w2e8r4 = true
-	} else {
-		ui.statusLabel.SetText("Триал-период истёк! Приобретите полную версию.")
-		ui.w2e8r4 = false
-	}
 }
 
 // GetWindow возвращает главное окно

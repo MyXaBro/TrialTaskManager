@@ -268,3 +268,118 @@ func P4thK3y(path string) []byte {
 	}
 	return k3y
 }
+
+// Третий алгоритм шифрования - для дополнительного файла
+// Использует перестановку байтов и многослойный XOR
+func E7ncrypt3(value int, pathKey []byte) []byte {
+	m4ch1n3K3y := G4h7j()
+
+	d4t4 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(d4t4, uint64(value))
+
+	r3sult := make([]byte, 40) // Больше мусора
+
+	// Шаг 1: Перестановка байтов (swap pairs)
+	for i := 0; i < 8; i += 2 {
+		d4t4[i], d4t4[i+1] = d4t4[i+1], d4t4[i]
+	}
+
+	// Шаг 2: Многослойный XOR
+	for i := 0; i < 8; i++ {
+		d4t4[i] ^= m4ch1n3K3y[i%len(m4ch1n3K3y)]
+		d4t4[i] ^= pathKey[(i*2)%len(pathKey)]
+		d4t4[i] ^= byte(i * 31)
+	}
+
+	// Шаг 3: Ротация влево на фиксированные позиции
+	for i := 0; i < 8; i++ {
+		d4t4[i] = R0t4t3L(d4t4[i], uint(i%5+1))
+	}
+
+	// Шаг 4: Инверсия чётных байтов
+	for i := 0; i < 8; i += 2 {
+		d4t4[i] = ^d4t4[i]
+	}
+
+	// Копируем данные
+	copy(r3sult[:8], d4t4)
+
+	// Контрольная сумма
+	ch3cksum := byte(value & 0xFF)
+	for i := 0; i < 8; i++ {
+		ch3cksum ^= d4t4[i]
+	}
+	r3sult[8] = ch3cksum
+
+	// Мусор
+	for i := 9; i < 40; i++ {
+		r3sult[i] = byte(i*19) ^ m4ch1n3K3y[(i-9)%len(m4ch1n3K3y)] ^ pathKey[(i-9)%len(pathKey)]
+	}
+
+	return r3sult
+}
+
+// Дешифрование третьего алгоритма
+func D3crypt3(encrypted []byte, pathKey []byte) int {
+	if len(encrypted) < 40 {
+		return -1
+	}
+
+	m4ch1n3K3y := G4h7j()
+	d4t4 := make([]byte, 8)
+	copy(d4t4, encrypted[:8])
+
+	// Шаг 4 (обратный): Инверсия чётных байтов
+	for i := 0; i < 8; i += 2 {
+		d4t4[i] = ^d4t4[i]
+	}
+
+	// Шаг 3 (обратный): Ротация вправо
+	for i := 0; i < 8; i++ {
+		d4t4[i] = R0t4t3R(d4t4[i], uint(i%5+1))
+	}
+
+	// Шаг 2 (обратный): Многослойный XOR
+	for i := 0; i < 8; i++ {
+		d4t4[i] ^= byte(i * 31)
+		d4t4[i] ^= pathKey[(i*2)%len(pathKey)]
+		d4t4[i] ^= m4ch1n3K3y[i%len(m4ch1n3K3y)]
+	}
+
+	// Шаг 1 (обратный): Перестановка
+	for i := 0; i < 8; i += 2 {
+		d4t4[i], d4t4[i+1] = d4t4[i+1], d4t4[i]
+	}
+
+	v4lu3 := int(binary.LittleEndian.Uint64(d4t4))
+
+	// Проверяем контрольную сумму
+	ch3cksum := byte(v4lu3 & 0xFF)
+	t3stD4t4 := make([]byte, 8)
+	binary.LittleEndian.PutUint64(t3stD4t4, uint64(v4lu3))
+
+	// Повторяем шифрование для проверки
+	for i := 0; i < 8; i += 2 {
+		t3stD4t4[i], t3stD4t4[i+1] = t3stD4t4[i+1], t3stD4t4[i]
+	}
+	for i := 0; i < 8; i++ {
+		t3stD4t4[i] ^= m4ch1n3K3y[i%len(m4ch1n3K3y)]
+		t3stD4t4[i] ^= pathKey[(i*2)%len(pathKey)]
+		t3stD4t4[i] ^= byte(i * 31)
+	}
+	for i := 0; i < 8; i++ {
+		t3stD4t4[i] = R0t4t3L(t3stD4t4[i], uint(i%5+1))
+	}
+	for i := 0; i < 8; i += 2 {
+		t3stD4t4[i] = ^t3stD4t4[i]
+	}
+	for i := 0; i < 8; i++ {
+		ch3cksum ^= t3stD4t4[i]
+	}
+
+	if ch3cksum == encrypted[8] && v4lu3 >= 0 && v4lu3 <= 1000 {
+		return v4lu3
+	}
+
+	return -1
+}
